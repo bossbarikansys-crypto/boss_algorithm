@@ -607,9 +607,12 @@ def analyze_top_selling_items(period: str = 'monthly', start_date: Optional[str]
         return []
 
 
-def analyze_hourly_distribution() -> Dict[str, Any]:
+def analyze_hourly_distribution(period: str = 'daily', start_date: Optional[str] = None, end_date: Optional[str] = None,
+                                year: Optional[int] = None, month: Optional[int] = None,
+                                week: Optional[int] = None, day: Optional[int] = None) -> Dict[str, Any]:
     """
     Analyze revenue distribution between morning and night shifts.
+    Supports period filtering identical to other analyze functions.
     
     Returns:
         Dictionary with morning and night revenue statistics
@@ -617,33 +620,99 @@ def analyze_hourly_distribution() -> Dict[str, Any]:
     try:
         db = get_mongodb_connection()
         sales_collection = db['salesReport']
+
+        # Build date-range query when a real period is requested
+        date_range = get_date_range(period, start_date, end_date, year, month, week, day)
+        query = {
+            'date': {
+                '$gte': date_range['start'],
+                '$lte': date_range['end']
+            }
+        }
+
+        # Get filtered sales reports
+        sales_reports = list(sales_collection.find(query))
         
-        # Get all sales reports
-        sales_reports = sales_collection.find({})
-        
-        morning_total = 0
-        night_total = 0
+        morning_total = 0.0
+        night_total = 0.0
         
         for report in sales_reports:
-            # Calculate morning revenue
-            morning_denom = report.get('denominations', {}).get('morning', {})
-            for denom_key, value in morning_denom.items():
-                if denom_key.startswith('d'):
-                    amount = int(denom_key[1:])
-                    morning_total += amount * value
-            
-            morning_online = report.get('onlineTransaction', {}).get('morning', 0)
+            # ------------------------------------------------------------------
+            # Primary path: use pre-calculated morningOS / nightOS stored on
+            # the document (set by the Next.js frontend since the schema update).
+            # These are the most reliable values.
+            # ------------------------------------------------------------------
+            morning_os = report.get('morningOS', 0) or 0
+            night_os = report.get('nightOS', 0) or 0
+
+            if morning_os > 0 or night_os > 0:
+                morning_total += morning_os
+                night_total += night_os
+                continue
+
+            # ------------------------------------------------------------------
+            # Fallback: recalculate from denomination data for older records
+            # that were saved before morningOS/nightOS were introduced.
+            # ------------------------------------------------------------------
+            denominations = report.get('denominations', {})
+            morning_data = denominations.get('morning', {}) or {}
+            night_data = denominations.get('night', {}) or {}
+
+            # Handle both old flat structure (morning.d1000) and
+            # new nested structure (morning.denominations.d1000)
+            if 'denominations' in morning_data and isinstance(morning_data.get('denominations'), dict):
+                morning_denom = morning_data['denominations']
+                morning_online = morning_data.get('onlineTransaction', 0) or 0
+                morning_charge_slips = morning_data.get('chargeSlips', []) or []
+            else:
+                morning_denom = morning_data
+                morning_online = 0
+                morning_charge_slips = []
+
+            if 'denominations' in night_data and isinstance(night_data.get('denominations'), dict):
+                night_denom = night_data['denominations']
+                night_online = night_data.get('onlineTransaction', 0) or 0
+                night_charge_slips = night_data.get('chargeSlips', []) or []
+            else:
+                night_denom = night_data
+                night_online = 0
+                night_charge_slips = []
+
+            # Calculate morning revenue from denominations
+            for denom_key, value in (morning_denom or {}).items():
+                if denom_key.startswith('d') and isinstance(value, (int, float)):
+                    try:
+                        amount = int(denom_key[1:])
+                        morning_total += amount * value
+                    except ValueError:
+                        continue
             morning_total += morning_online
-            
-            # Calculate night revenue
-            night_denom = report.get('denominations', {}).get('night', {})
-            for denom_key, value in night_denom.items():
-                if denom_key.startswith('d'):
-                    amount = int(denom_key[1:])
-                    night_total += amount * value
-            
-            night_online = report.get('onlineTransaction', {}).get('night', 0)
+            for slip in morning_charge_slips:
+                if isinstance(slip, dict):
+                    morning_total += slip.get('amount', 0) or 0
+                elif isinstance(slip, (int, float)):
+                    morning_total += slip
+
+            # Calculate night revenue from denominations
+            for denom_key, value in (night_denom or {}).items():
+                if denom_key.startswith('d') and isinstance(value, (int, float)):
+                    try:
+                        amount = int(denom_key[1:])
+                        night_total += amount * value
+                    except ValueError:
+                        continue
             night_total += night_online
+            for slip in night_charge_slips:
+                if isinstance(slip, dict):
+                    night_total += slip.get('amount', 0) or 0
+                elif isinstance(slip, (int, float)):
+                    night_total += slip
+
+            # Legacy: handle old root-level onlineTransaction structure
+            online = report.get('onlineTransaction', {})
+            if isinstance(online, dict):
+                morning_total += online.get('morning', 0) or 0
+                night_total += online.get('night', 0) or 0
         
         total = morning_total + night_total
         morning_percentage = round((morning_total / total * 100), 2) if total > 0 else 0
@@ -663,6 +732,8 @@ def analyze_hourly_distribution() -> Dict[str, Any]:
     
     except Exception as e:
         print(f"Error analyzing hourly distribution: {e}")
+        import traceback
+        traceback.print_exc()
         return {
             'morning': {'revenue': 0, 'percentage': 0},
             'night': {'revenue': 0, 'percentage': 0},

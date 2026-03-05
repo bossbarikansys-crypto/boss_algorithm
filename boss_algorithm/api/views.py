@@ -562,9 +562,26 @@ def sales_zero_sales_items(request):
 def sales_hourly_distribution(request):
     """
     API endpoint to get revenue distribution by shift (morning/night).
+    Accepts the same period query params as other sales endpoints.
     """
     try:
-        hourly_data = analyze_hourly_distribution()
+        period = request.GET.get('period', 'daily').lower()
+        start_date = request.GET.get('start_date', None)
+        end_date = request.GET.get('end_date', None)
+        year = int(request.GET.get('year')) if request.GET.get('year') else None
+        month = int(request.GET.get('month')) if request.GET.get('month') else None
+        week = int(request.GET.get('week')) if request.GET.get('week') else None
+        day = int(request.GET.get('day')) if request.GET.get('day') else None
+
+        hourly_data = analyze_hourly_distribution(
+            period=period,
+            start_date=start_date,
+            end_date=end_date,
+            year=year,
+            month=month,
+            week=week,
+            day=day
+        )
         
         return JsonResponse({
             'success': True,
