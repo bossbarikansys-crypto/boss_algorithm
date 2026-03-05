@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -20,12 +21,19 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-106l^y7#tmynuro3_by6)6@-2k60avmg@@*rbp#uazl_&!pu+7'
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-106l^y7#tmynuro3_by6)6@-2k60avmg@@*rbp#uazl_&!pu+7')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = []
+# ALLOWED_HOSTS configuration
+ALLOWED_HOSTS = ['boss-algorithm.onrender.com']
+if os.environ.get('ALLOWED_HOSTS'):
+    ALLOWED_HOSTS.extend([host.strip() for host in os.environ.get('ALLOWED_HOSTS').split(',') if host.strip()])
+
+# Debug: Print ALLOWED_HOSTS on startup (remove after confirming it works)
+print(f"DEBUG: ALLOWED_HOSTS = {ALLOWED_HOSTS}")
+print(f"DEBUG: Raw env ALLOWED_HOSTS = {repr(os.environ.get('ALLOWED_HOSTS'))}")
 
 
 # Application definition
@@ -125,7 +133,7 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # CORS Configuration
-CORS_ALLOWED_ORIGINS = [
+CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost:3000,http://127.0.0.1:3000').split(',') if os.environ.get('CORS_ALLOWED_ORIGINS') else [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
 ]

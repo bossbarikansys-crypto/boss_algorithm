@@ -5,7 +5,7 @@ DJANGO_SECRET_KEY=v*&jw+j4ww#@7e!@o-91r)c0q&c4-o$9&yg*!@e%#uk4%5jx9i
 
 DEBUG=False
 
-ALLOWED_HOSTS=your-app-name.onrender.com
+ALLOWED_HOSTS=boss-algorithm.onrender.com
 
 CORS_ALLOWED_ORIGINS=https://your-nextjs-frontend-url.com
 
@@ -13,15 +13,21 @@ PORT=8000
 
 PYTHON_VERSION=3.11.0
 
+MONGODB_URI=mongodb+srv://dbUser:bossbarikan@barikandb.rsrkuro.mongodb.net/Sales
+
 
 # START COMMAND for Render:
-# gunicorn boss_algorithm.wsgi:application
+# cd virtualEnv/boss_algorithm && gunicorn boss_algorithm.wsgi:application
+#
+# OR (RECOMMENDED): Set "Root Directory" in Render settings to: virtualEnv/boss_algorithm
+# Then use start command: gunicorn boss_algorithm.wsgi:application
 
 
 # Instructions:
-# 1. Replace "your-app-name.onrender.com" with your actual Render service URL
+# 1. In Render, add boss-algorithm.onrender.com to ALLOWED_HOSTS (already set above)
 # 2. Replace "https://your-nextjs-frontend-url.com" with your actual Next.js frontend URL
-# 3. If you have multiple allowed hosts or CORS origins, separate them with commas:
+# 3. MONGODB_URI: Consider creating a new MongoDB user with production credentials instead of using the current ones
+# 4. If you have multiple allowed hosts or CORS origins, separate them with commas:
 #    ALLOWED_HOSTS=app.onrender.com,yourdomain.com
 #    CORS_ALLOWED_ORIGINS=https://frontend1.com,https://frontend2.com
-# 4. For production database, consider adding DATABASE_URL if using PostgreSQL instead of SQLite
+# 5. For production database, consider adding DATABASE_URL if using PostgreSQL instead of SQLite
