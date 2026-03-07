@@ -27,7 +27,7 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-106l^y7#tmynur
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
 # ALLOWED_HOSTS configuration
-ALLOWED_HOSTS = ['boss-algorithm.onrender.com', 'barikan-sys.xyz', 'www.barikan-sys.xyz']
+ALLOWED_HOSTS = ['boss-algorithm.onrender.com', 'barikan-sys.xyz','barikan-admin-sys.vercel.app']
 if os.environ.get('ALLOWED_HOSTS'):
     ALLOWED_HOSTS.extend([host.strip() for host in os.environ.get('ALLOWED_HOSTS').split(',') if host.strip()])
 
@@ -137,7 +137,6 @@ CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost:
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "https://barikan-sys.xyz",
-    "https://www.barikan-sys.xyz",
 ]
 
 CORS_ALLOW_CREDENTIALS = True
